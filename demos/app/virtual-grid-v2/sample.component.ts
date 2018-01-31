@@ -32,7 +32,7 @@ export class VirtualGridV2SampleComponent {
 
     generateData() {
         var dummyData = [];
-        for(var j = 0; j < 100; j++){
+        for(var j = 0; j < 300; j++){
             this.cols.push({field: j.toString(), width: j % 3 === 0 ?
               String(Math.floor((Math.random() * 50) + 50)) :
               (
@@ -43,7 +43,7 @@ export class VirtualGridV2SampleComponent {
               });
         }
     
-        for(let i = 0; i < 10000; i++) {
+        for(let i = 0; i < 50000; i++) {
             let obj = {};
             for(var j = 0; j <  this.cols.length; j++){
                 let col = this.cols[j].field;

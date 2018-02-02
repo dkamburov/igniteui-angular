@@ -8,7 +8,9 @@ import {
     HostListener,
     Input,
     QueryList,
-    ViewChildren
+    ViewChild,
+    ViewChildren,
+    ViewContainerRef
 } from "@angular/core";
 import { IgxGridAPIService } from "./api.service";
 import { IgxGridCellComponent } from "./cell.component";
@@ -78,6 +80,8 @@ export class IgxGridRowComponent implements VirtualRow {
 
     protected defaultCssClass = "igx-grid__tr";
     protected isFocused = false;
+
+    @ViewChild('rowContent', {read: ViewContainerRef}) rowContent: ViewContainerRef;
 
     constructor(private gridAPI: IgxGridAPIService, public changeDet: ChangeDetectorRef) {}
 

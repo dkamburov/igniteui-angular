@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, ViewContainerRef, ChangeDetectorRef } from '@angular/core';
 import { VirtualRow } from '../../lib/main';
 
 @Component({
@@ -6,7 +6,7 @@ import { VirtualRow } from '../../lib/main';
   styleUrls: ['./row.component.css'],
   template: 
     `<div class="rowStyle" [ngStyle]="{width: width ? width + 'px' : 'auto', height: height ? height + 'px' : 'auto'}">
-        <ng-content></ng-content>
+      <ng-template #rowContent ></ng-template>
     </div>`
 })
 export class RowComponent implements VirtualRow, OnInit {
@@ -15,6 +15,8 @@ export class RowComponent implements VirtualRow, OnInit {
   @Input() rowData: any;
   @Input() defaultOptions: any;
   @Input() cells: Array<any>;
+
+  @ViewChild('rowContent', {read: ViewContainerRef}) rowContent: ViewContainerRef;
 
   constructor(public changeDet:ChangeDetectorRef) {
   }

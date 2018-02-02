@@ -21,7 +21,7 @@ export class VirtualGridV2SampleComponent {
 
     constructor() {
         this.cols = [];
-        this.rowHeight = 30;
+        this.rowHeight = 50;
         this.colWidth = 200;
         
     }
@@ -40,7 +40,7 @@ export class VirtualGridV2SampleComponent {
                   String(Math.floor((Math.random() * 200) + 50)) :
                   String(Math.floor((Math.random() * 400) + 50))
               )
-              });
+            });
         }
     
         for(let i = 0; i < 50000; i++) {

@@ -1,4 +1,3 @@
-<td [ngStyle]="{width: width + 'px', height: height + 'px'}">
     <ng-template #defaultCell>
         {{ formatter ? formatter(value) : value }}
     </ng-template>
@@ -7,4 +6,3 @@
     </ng-template>
     <ng-container *ngTemplateOutlet="template; context: context">
     </ng-container>
-</td>

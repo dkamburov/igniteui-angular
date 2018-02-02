@@ -48,14 +48,19 @@ export class VirtualContainerComponent implements OnInit {
   private lastScrollTop: number;
   private lastScrollLeft: number;
   private accScrollTop: number;
+  private accScrollLeft: number;
 
   private vChunkNumRows: number;
   private _renderRestChunksTimer: any;
-  private endColIndex: number;
+  private curStartColIndex: number;
+  private curEndColIndex: number;
 
-  public cells: Array<Array<ComponentRef<{}>>>;
+  public cells: Array<Array<{
+    colIndex: number,
+    elem:  ComponentRef<{}>
+  }>>;
   public rows: Array<{
-    index: number,
+    rowIndex: number,
     elem: ComponentRef<{}>
   }>;
 
@@ -69,7 +74,9 @@ export class VirtualContainerComponent implements OnInit {
     this.lastScrollTop = 0
     this.lastScrollLeft = 0;
     this.accScrollTop = 0;
-    this.endColIndex = 0;
+    this.accScrollLeft = 0;
+    this.curStartColIndex = 0;
+    this.curEndColIndex = 0;
 
     this.rows = [];
     this.cells = [];
@@ -117,72 +124,83 @@ export class VirtualContainerComponent implements OnInit {
     
     return slicedCols;
   }
-  createCell(value, column) {
+  
+  createCellStart(value, column, rowRef) {
     var cellComponentFactory = this.componentFactoryResolver.resolveComponentFactory(this.cellComponent);  
-    var newCell = this.chunksContainer.createComponent(cellComponentFactory);
+    var newCell =  (<VirtualRow>rowRef.instance).rowContent.createComponent(cellComponentFactory, 0);
     (<VirtualCell>newCell.instance).height = this.verticalItemHeight;
     (<VirtualCell>newCell.instance).width = column.width;
     (<VirtualCell>newCell.instance).defaultOptions = this.cellDefaults;
     (<VirtualCell>newCell.instance).value = value;
-    (<VirtualCell>newCell.instance).changeDet.detectChanges();
+    (<VirtualCell>newCell.instance).row = rowRef.instance;
+    newCell.hostView.detectChanges();
+
+    return newCell;
+  }
+
+  createCellEnd(value, column, rowRef) {
+    var cellComponentFactory = this.componentFactoryResolver.resolveComponentFactory(this.cellComponent);  
+    var newCell =  (<VirtualRow>rowRef.instance).rowContent.createComponent(cellComponentFactory);
+    (<VirtualCell>newCell.instance).height = this.verticalItemHeight;
+    (<VirtualCell>newCell.instance).width = column.width;
+    (<VirtualCell>newCell.instance).defaultOptions = this.cellDefaults;
+    (<VirtualCell>newCell.instance).value = value;
+    (<VirtualCell>newCell.instance).row = rowRef.instance;
+    newCell.hostView.detectChanges();
 
     return newCell;
   }
 
   createRowStart(rowData, startColIndex, endColIndex) {
     var rowComponentFactory = this.componentFactoryResolver.resolveComponentFactory(this.rowComponent),
-      colsData = this.cols.slice(startColIndex, endColIndex),
-      cellsData = this.sliceColumns(rowData, startColIndex, endColIndex),
+      colsData = this.cols.slice(startColIndex, endColIndex + 1),
+      cellsData = this.sliceColumns(rowData, startColIndex, endColIndex + 1),
       rowNativeCells = [];
 
-    this.cells.unshift([]);
-    for(let i = 0; i < colsData.length; i++) {
-      let newCell = this.createCell(cellsData[colsData[i].field], colsData[i]);
-      
-      rowNativeCells.push(newCell.location.nativeElement);
-      this.cells[0].push(newCell);
-    }
-      
-    let newRow = this.chunksContainer.createComponent(rowComponentFactory, 0, undefined, [ rowNativeCells ]);
-    
+    let newRow = this.chunksContainer.createComponent(rowComponentFactory, 0);
     (<VirtualRow>newRow.instance).height = this.verticalItemHeight;
     (<VirtualRow>newRow.instance).width = this.maxRowWidth;
     (<VirtualRow>newRow.instance).defaultOptions = this.rowDefaults;
 
-    for (let i = 0 ; i < this.cells[0].length; i++) {
-      (<VirtualCell>this.cells[0][i].instance).row = newRow.instance;
+    this.cells.unshift([]);
+    for(let i = 0; i < colsData.length; i++) {
+      let newCell = this.createCellEnd(cellsData[colsData[i].field], colsData[i], newRow);
+      
+      rowNativeCells.push(newCell.location.nativeElement);
+      this.cells[0].push({
+        colIndex: startColIndex + i,
+        elem: newCell
+      });
     }
 
-    (<VirtualRow>newRow.instance).changeDet.detectChanges();
+    newRow.hostView.detectChanges();
     return newRow;
   }
 
   createRowEnd(rowData, startColIndex, endColIndex) {
     var rowComponentFactory = this.componentFactoryResolver.resolveComponentFactory(this.rowComponent),
-      colsData = this.cols.slice(startColIndex, endColIndex),
-      cellsData = this.sliceColumns(rowData, startColIndex, endColIndex),
+      colsData = this.cols.slice(startColIndex, endColIndex + 1),
+      cellsData = this.sliceColumns(rowData, startColIndex, endColIndex + 1),
       newCellsIndex = this.cells.length,
       rowNativeCells = [];
 
-    this.cells.push([]);
-    for(let i = 0; i < colsData.length; i++) {
-      let newCell = this.createCell(cellsData[colsData[i].field], colsData[i]);
-      
-      rowNativeCells.push(newCell.location.nativeElement);
-      this.cells[newCellsIndex].push(newCell);
-    }
-      
-    let newRow = this.chunksContainer.createComponent(rowComponentFactory, this.rows.length, undefined, [ rowNativeCells ]);
-    
+    let newRow = this.chunksContainer.createComponent(rowComponentFactory);
     (<VirtualRow>newRow.instance).height = this.verticalItemHeight;
     (<VirtualRow>newRow.instance).width = this.maxRowWidth;
     (<VirtualRow>newRow.instance).defaultOptions = this.rowDefaults;
 
-    for (let i = 0 ; i < this.cells[newCellsIndex].length; i++) {
-      (<VirtualCell>this.cells[newCellsIndex][i].instance).row = newRow.instance;
+    this.cells.push([]);
+    for(let i = 0; i < colsData.length; i++) {
+      let newCell = this.createCellEnd(cellsData[colsData[i].field], colsData[i], newRow);
+      
+      rowNativeCells.push(newCell.location.nativeElement);
+      this.cells[newCellsIndex].push({
+        colIndex: startColIndex + i,
+        elem: newCell
+      });
     }
-
-    (<VirtualRow>newRow.instance).changeDet.detectChanges();
+    
+    newRow.hostView.detectChanges();
     return newRow;
   }
 
@@ -191,25 +209,25 @@ export class VirtualContainerComponent implements OnInit {
       curLength = 0,
       containerWidth = parseInt(this.containerWidth);
 
-    for(let i = 0; i < this.cols.length; i++) {
+    for(let i = this.curStartColIndex; i < this.cols.length; i++) {
       if(curLength > containerWidth) {
-        this.endColIndex = i;
+        this.curEndColIndex = i;
         break;
       }
       curLength += parseInt(this.cols[i].width);
     }
 
-    let newRow = this.createRowEnd(initData[0], 0, this.endColIndex + 1);
+    let newRow = this.createRowEnd(initData[0], this.curStartColIndex, this.curEndColIndex);
     this.rows.push({
-      index: 0,
+      rowIndex: 0,
       elem: newRow
     });
 
     //We do it backwards because createComponent needs to have index specified, and we use 0 there for each new row and they are added on top
     for(let i = 0; i < initData.length; i++) {
-      let newRow = this.createRowEnd(initData[i], 0, this.endColIndex + 1);
+      let newRow = this.createRowEnd(initData[i], this.curStartColIndex, this.curEndColIndex);
       this.rows.push({
-        index: i,
+        rowIndex: i,
         elem: newRow
       });
     }
@@ -219,7 +237,7 @@ export class VirtualContainerComponent implements OnInit {
 
   loadNextRow() {
     var newRow, oldRow, oldCells,
-      newRowIndex = this.rows[this.rows.length - 1].index + 1,
+      newRowIndex = this.rows[this.rows.length - 1].rowIndex + 1,
       newRowData = this.data[newRowIndex];
 
     if(!newRowData) {
@@ -232,46 +250,46 @@ export class VirtualContainerComponent implements OnInit {
 
     //clear old cells and the row itself
     for(let i = 0; i < oldCells.length; i++) {
-      oldCells[i].hostView.destroy();
-      oldCells[i].destroy();
+      oldCells[i].elem.hostView.destroy();
+      oldCells[i].elem.destroy();
     }
     oldRow.elem.hostView.destroy();
     oldRow.elem.destroy();
     
     //new row creation
-    newRow = this.createRowEnd(newRowData, 0, this.endColIndex);
+    newRow = this.createRowEnd(newRowData, this.curStartColIndex, this.curEndColIndex);
     this.rows.push({
-      index: newRowIndex,
+      rowIndex: newRowIndex,
       elem: newRow
     });
   }
 
   loadPrevRow() {
     var newRow, oldRow, oldCells,
-      newRowIndex = this.rows[0].index - 1,
+      newRowIndex = this.rows[0].rowIndex - 1,
       newRowData = this.data[newRowIndex];
 
-      if(!newRowData) {
-        newRowIndex = 0;
-        newRowData = this.data[newRowIndex];
-        this.displayContainer.nativeElement.style.top = -this.verticalItemHeight + "px";
-      }
+    if(!newRowData) {
+      newRowIndex = 0;
+      newRowData = this.data[newRowIndex];
+      this.displayContainer.nativeElement.style.top = -this.verticalItemHeight + "px";
+    }
 
     oldRow = this.rows.pop();
     oldCells = this.cells.pop();
 
     //clear old cells and the row itself
     for(let i = 0; i < oldCells.length; i++) {
-      oldCells[i].hostView.destroy();
-      oldCells[i].destroy();
+      oldCells[i].elem.hostView.destroy();
+      oldCells[i].elem.destroy();
     }
     oldRow.elem.hostView.destroy();
     oldRow.elem.destroy();
     
     //new row creation
-    newRow = this.createRowStart(newRowData, 0, this.endColIndex);
+    newRow = this.createRowStart(newRowData, this.curStartColIndex, this.curEndColIndex);
     this.rows.unshift({
-      index: newRowIndex,
+      rowIndex: newRowIndex,
       elem: newRow
     });
   }
@@ -281,21 +299,161 @@ export class VirtualContainerComponent implements OnInit {
     var startIndex = Math.floor(scrollTop / this.verticalItemHeight),
       endIndex = startIndex + this.rows.length,
       rowsData = this.data.slice(startIndex, endIndex),
-      colsData = this.cols.slice(0, this.endColIndex + 1);
+      colsData = this.cols.slice(this.curStartColIndex, this.curEndColIndex + 1);
     
     for(let i = 0; i < this.cells.length; i++) {
       let cellsData;
-      this.rows[i].index = startIndex + i;
+      this.rows[i].rowIndex = startIndex + i;
       if(!rowsData[i] && startIndex < 0) {
-        cellsData = this.sliceColumns(rowsData[0], 0, this.endColIndex);
+        cellsData = this.sliceColumns(rowsData[0], this.curStartColIndex, this.curEndColIndex + 1);
       } else if(!rowsData[i] && endIndex >= this.data.length) {
-        cellsData = this.sliceColumns(rowsData[rowsData.length - 1], 0, this.endColIndex);
+        cellsData = this.sliceColumns(rowsData[rowsData.length - 1], this.curStartColIndex, this.curEndColIndex + 1);
       } else{
-        cellsData = this.sliceColumns(rowsData[i], 0, this.endColIndex);
+        cellsData = this.sliceColumns(rowsData[i], this.curStartColIndex, this.curEndColIndex + 1);
       }
 
       for(let j = 0; j < this.cells[i].length; j++) {
-        (<VirtualCell>this.cells[i][j].instance).value = cellsData[colsData[j].field];
+        (<VirtualCell>this.cells[i][j].elem.instance).value = cellsData[colsData[j].field];
+      }
+    }
+  }
+
+  removeRightCol(){
+    var oldCell;
+    for(let i = 0; i < this.cells.length; i++) {
+      oldCell = this.cells[i].pop();
+      oldCell.elem.hostView.destroy();
+      oldCell.elem.destroy();
+    }
+    this.curEndColIndex--;
+  }
+
+  removeLeftCol() {
+    var oldCell;
+    for(let i = 0; i < this.cells.length; i++) {
+      oldCell = this.cells[i].shift();
+      oldCell.elem.hostView.destroy();
+      oldCell.elem.destroy();
+    }
+    this.curStartColIndex++;
+  }
+
+  addRightCol() {
+    var newCell,
+      newColIndex = this.cells[0][this.cells[0].length - 1].colIndex + 1,
+      newColField;
+
+    if(!this.cols[newColIndex]) {
+      return false;
+    }
+    
+    newColField = this.cols[newColIndex].field
+    for(let i = 0; i < this.rows.length; i++) {
+      let rowIndex = this.rows[i].rowIndex;
+      newCell = this.createCellEnd(this.data[rowIndex][newColField], this.cols[newColIndex], this.rows[i].elem);
+      this.cells[i].push({
+        colIndex: newColIndex,
+        elem:  newCell
+      });
+    }
+
+    this.curEndColIndex++;
+    return true;
+  }
+
+  addLeftCol() {
+    var newCell,
+      newColIndex = this.cells[0][0].colIndex - 1,
+      newColField;
+
+    if(!this.cols[newColIndex]) {
+      return false;
+    }
+
+    newColField = this.cols[newColIndex].field
+    for(let i = 0; i < this.rows.length; i++) {
+      let rowIndex = this.rows[i].rowIndex;
+      newCell = this.createCellStart(this.data[rowIndex][newColField], this.cols[newColIndex], this.rows[i].elem);
+      this.cells[i].unshift({
+        colIndex: newColIndex,
+        elem:  newCell
+      });
+    }
+
+    this.curStartColIndex--;
+    return true;
+  }
+  
+  fixUpdateAllCols(scrollLeft) {
+    var colsData,
+      curWidth = 0;
+
+    for(let i = 0; i < this.cols.length; i++) {
+      curWidth += parseInt(this.cols[i].width);
+
+      if(curWidth > scrollLeft) {
+        this.curStartColIndex = i;
+        break;
+      }
+    }
+
+    curWidth = 0;
+    for(let i = this.curStartColIndex; i < this.cols.length; i++) {
+      curWidth += parseInt(this.cols[i].width);
+
+      if(curWidth > parseInt(this.containerWidth) * 1.2) {
+        this.curEndColIndex = i;
+        break;
+      }
+    }
+
+    colsData = this.cols.slice(this.curStartColIndex, this.curEndColIndex + 1);
+    this.updateCells(colsData);
+  }
+
+  getColIndex(colField: string) {
+    var i;
+    for(i = 0; i < this.cols.length; i++) {
+      if(this.cols[i].field === colField) {
+        break;
+      }
+    }
+
+     return i;
+  }
+
+  updateCells(cols: Array<{field: string, width: string}>) {
+    var startColIndex = this.getColIndex(cols[0].field);
+    //Update cells, if exceeding the currently created amount create new cells
+    for (let colIndex = 0; colIndex < cols.length; colIndex++) {
+      if(colIndex < this.cells[0].length) {
+        for(let rowIndex = 0; rowIndex < this.rows.length; rowIndex++) {
+          let dataRowIdx = this.rows[rowIndex].rowIndex;
+          this.cells[rowIndex][colIndex].colIndex = startColIndex + colIndex;
+          (<VirtualCell>this.cells[rowIndex][colIndex].elem.instance).width = parseInt(cols[colIndex].width);
+          (<VirtualCell>this.cells[rowIndex][colIndex].elem.instance).value = this.data[dataRowIdx][cols[colIndex].field];
+        }
+      } else {
+        for(let rowIndex = 0; rowIndex < this.rows.length; rowIndex++) {
+          let dataRowIdx = this.rows[rowIndex].rowIndex;
+          let newCell = this.createCellEnd(this.data[dataRowIdx][cols[colIndex].field], cols[colIndex], this.rows[rowIndex].elem);
+          this.cells[rowIndex].push({
+            colIndex: startColIndex + colIndex,
+            elem: newCell
+          });
+        }
+      }
+    }
+
+    //Remove any extra cells at the end
+    if (this.cells[0].length > cols.length) {
+      let numToRemove = this.cells[0].length - cols.length;
+      for(let rowIndex = 0; rowIndex < this.rows.length; rowIndex++) {
+        for (let i = 0; i < numToRemove; i++) {
+          let oldCell = this.cells[rowIndex].pop();
+          oldCell.elem.hostView.destroy();
+          oldCell.elem.destroy();
+        }
       }
     }
   }
@@ -310,18 +468,22 @@ export class VirtualContainerComponent implements OnInit {
     this.virtScroll.emit({scrollTop: curScrollTop, scrollLeft: curScrollLeft});
 
     //Updating vertical chunks
-    if(curScrollTop != this.lastScrollTop) {
+    if(curScrollTop != this.lastScrollTop &&
+      (this.rows.length - 1) * this.verticalItemHeight > parseInt(this.containerHeight)) {
+      let numToRender = 0;
+
+      this.accScrollTop += curScrollTop - this.lastScrollTop;
+      numToRender = Math.floor(Math.abs(this.accScrollTop) / this.verticalItemHeight);
+
       if(Math.abs(curScrollTop - this.lastScrollTop) <= this.verticalItemHeight) {
         let newTop = parseInt(this.displayContainer.nativeElement.style.top) - (curScrollTop - this.lastScrollTop);
         this.displayContainer.nativeElement.style.top =  newTop + "px";
       }
       
-      this.accScrollTop += curScrollTop - this.lastScrollTop;
-      if(Math.abs(this.accScrollTop) / this.verticalItemHeight  >= 1) {
-        let numToRender = Math.floor(Math.abs(this.accScrollTop) / this.verticalItemHeight);
+      if(numToRender >= 1) {
         this.accScrollTop = this.accScrollTop % this.verticalItemHeight;
 
-        if(numToRender < this.vChunkNumRows) {
+        if(Math.abs(curScrollTop - this.lastScrollTop) < parseInt(this.containerHeight)) {
           this.displayContainer.nativeElement.style.top = Math.sign(vDir) * (-this.accScrollTop) + "px";
 
           for(let i = 0 ; i < numToRender; i ++) {
@@ -339,42 +501,102 @@ export class VirtualContainerComponent implements OnInit {
     }
 
     //Updating horizontal chunks
-    // if(curScrollLeft != this.lastScrollLeft) {
-    //   let currentWidth = 0;
+    if(curScrollLeft != this.lastScrollLeft) {
+      let virtScrollLeft = parseInt(this.displayContainer.nativeElement.style.left),
+        renderedWidth = 0;
 
-    //   for(let i = 0; i < this.previousChunk.instance.data.hChunks[0].length; i++) {
-    //     if (hDir > 0 &&
-    //         currentWidth <= curScrollLeft &&
-    //         curScrollLeft < currentWidth + this.previousChunk.instance.data.hChunks[0][i].width &&
-    //         i >= this.currentHChunkIdx) {
-    //       newHChunkIndex = i;
-    //       break;
-    //     } else if (hDir <= 0 && 
-    //         currentWidth - this.previousChunk.instance.data.hChunks[0][i].width <= curScrollLeft &&
-    //         curScrollLeft < currentWidth && 
-    //         i <= this.currentHChunkIdx) {
-    //       newHChunkIndex = i;
-    //       break;
-    //     }
+      this.accScrollLeft += curScrollLeft - this.lastScrollLeft;
 
-    //     currentWidth += this.previousChunk.instance.data.hChunks[0][i].width;
-    //   }
+      if(Math.abs(curScrollLeft - this.lastScrollLeft) <= parseInt(this.containerWidth)) {
+        let newLeft = parseInt(this.displayContainer.nativeElement.style.left) - (curScrollLeft - this.lastScrollLeft);
+        this.displayContainer.nativeElement.style.left =  newLeft + "px";
+        virtScrollLeft = newLeft;
 
-    //   if(Math.abs(curScrollLeft - this.lastScrollLeft) <= this.previousChunk.instance.data.hChunks[0][0].width) {
-    //     let newLeft = parseInt(this.displayContainer.nativeElement.style.left) - (curScrollLeft - this.lastScrollLeft);
-    //     this.displayContainer.nativeElement.style.left =  newLeft + "px";
-    //   }
+        for(let i = this.curStartColIndex; i <= this.curEndColIndex; i++) {
+          renderedWidth +=  parseInt(this.cols[i].width);
+        }
 
-    //   if(newHChunkIndex && newHChunkIndex !== this.currentHChunkIdx) {
-    //     this.currentHChunkIdx = newHChunkIndex;  
-        
-    //     this.updateHorizontalChunks(this.previousChunk, this.currentHChunkIdx);
-    //     this.updateHorizontalChunks(this.currentChunk, this.currentHChunkIdx);
-    //     this.updateHorizontalChunks(this.nextChunk, this.currentHChunkIdx);
+        if(hDir >= 0) {
+          let widthToRemove = 0, widthRemoved = 0, numRemoved = 0,
+            widthToRender = 0, widthRendered = 0;
 
-    //     this.displayContainer.nativeElement.style.left = (-this.previousChunk.instance.data.hChunks[0][this.currentHChunkIdx-1].width - (curScrollLeft - currentWidth)) + "px";
-    //   }
-    // }
+          //Remove cols out of view on the left
+          widthToRemove = Math.abs(virtScrollLeft);
+          for(let i = this.curStartColIndex; i <= this.curEndColIndex; i++) {
+            let colWidth = parseInt(this.cols[i].width);
+
+            widthRemoved += colWidth;
+            if(widthRemoved < Math.abs(virtScrollLeft)) {
+              this.removeLeftCol();
+              numRemoved++;
+              renderedWidth -= colWidth;
+            } else{
+              widthRemoved -= colWidth;
+              break;
+            }
+          }
+
+          //Render needed cols
+          widthToRender = parseInt(this.containerWidth) * 1.2 - (renderedWidth - this.accScrollLeft);
+          if(widthToRender) {
+            for(let i = this.curEndColIndex; i < this.cols.length; i++) {
+              if(widthRendered >= widthToRender) {
+                break;
+              } else {
+                this.addRightCol();
+                widthRendered += parseInt(this.cols[i].width);
+              }
+            }
+          }
+
+          if(numRemoved) {
+            this.accScrollLeft -= widthRemoved;
+            this.displayContainer.nativeElement.style.left =  (-this.accScrollLeft) + "px";
+          }
+        } else {
+          let widthToRemove,
+            widthRemoved = 0, numRendered = 0,
+            widthToRender = 0, widthRendered = 0;
+
+          //Remove cols out of view on the right
+          widthToRemove = renderedWidth - (parseInt(this.containerWidth) - virtScrollLeft);
+          for(let i = this.curEndColIndex; i >= this.curStartColIndex; i--) {
+            let colWidth = parseInt(this.cols[i].width);
+
+            widthRemoved += colWidth;
+            if(widthRemoved < widthToRemove) {
+              this.removeRightCol();
+              renderedWidth -= colWidth;
+            } else{
+              break;
+            }
+          }
+
+          //Render needed cols
+          widthToRender = parseInt(this.containerWidth) * 1.2 - (parseInt(this.containerWidth) - virtScrollLeft);
+          if(widthToRender > 0) {
+            for(let i = this.curStartColIndex - 1; i >= 0; i--) {
+              if(widthRendered >= widthToRender) {
+                break;
+              } else {
+                this.addLeftCol();
+                widthRendered += parseInt(this.cols[i].width);
+                numRendered++;
+              }
+            }
+          }
+
+          if(numRendered) {
+            this.accScrollLeft = widthRendered - virtScrollLeft;
+            this.displayContainer.nativeElement.style.left =  (-this.accScrollLeft) + "px";
+          }
+        }
+      } else {
+        this.fixUpdateAllCols(curScrollLeft);
+        this.accScrollLeft = 0;
+        this.displayContainer.nativeElement.style.left = "0px";
+      }
+    }
     
     //Cache data for the next scroll
     this.lastScrollTop = curScrollTop;

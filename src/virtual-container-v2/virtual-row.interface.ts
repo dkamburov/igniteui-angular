@@ -1,4 +1,4 @@
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, ViewContainerRef } from '@angular/core';
 
 export interface VirtualRow {
     width: number;
@@ -7,4 +7,5 @@ export interface VirtualRow {
     defaultOptions: any;
     cells: Array<any>;
     changeDet: ChangeDetectorRef;
+    rowContent: ViewContainerRef;
 }

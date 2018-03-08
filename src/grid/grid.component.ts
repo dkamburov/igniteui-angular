@@ -164,12 +164,6 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
     @ViewChild("scrollContainer", { read: IgxForOfDirective })
     public parentVirtDir: IgxForOfDirective<any>;
 
-    @ViewChild("verticalScrollContainer", { read: IgxForOfDirective })
-    public verticalScrollContainer: IgxForOfDirective<any>;
-
-    @ViewChild("scr", { read: ElementRef })
-    public scr: ElementRef;
-
     @ViewChild("headerContainer", { read: IgxForOfDirective })
     public headerContainer: IgxForOfDirective<any>;
 
@@ -279,6 +273,8 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         this._pinnedStartColumns = this._columns.filter((c) => c.pinned && c.pinLocation === PinLocation.Start);
         this._pinnedEndColumns = this._columns.filter((c) => c.pinned && c.pinLocation === PinLocation.End);
         this._unpinnedColumns = this._columns.filter((c) => !c.pinned);
+
+        this.rowList.first.virtDirRow.hScroll.style["margin-left"] = this.startPinnedWidth + "px";
     }
 
     public ngAfterViewInit() {
@@ -302,15 +298,13 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
                 this.tfoot.nativeElement.firstElementChild.clientHeight : 0;
             this.calcHeight = parseInt(computed.getPropertyValue("height"), 10) -
                 this.theadRow.nativeElement.clientHeight -
-                footerHeight -
-                this.scr.nativeElement.clientHeight;
+                footerHeight;
         } else {
             const footerHeight = this.tfoot.nativeElement.firstElementChild ?
             this.tfoot.nativeElement.firstElementChild.clientHeight : 0;
             this.calcHeight = parseInt(this.height, 10) -
                 this.theadRow.nativeElement.clientHeight -
-                footerHeight -
-                this.scr.nativeElement.clientHeight;
+                footerHeight;
         }
         this.cdr.detectChanges();
     }
@@ -528,6 +522,8 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
             }
         }
 
+        this.rowList.first.virtDirRow.hScroll.style["margin-left"] = this.startPinnedWidth + "px";
+
         this.markForCheck();
     }
 
@@ -540,6 +536,7 @@ export class IgxGridComponent implements OnInit, OnDestroy, AfterContentInit, Af
         } else if (this._pinnedStartColumns.indexOf(col) !== -1) {
             this._pinnedStartColumns.splice(this._pinnedStartColumns.indexOf(col), 1);
         }
+        this.rowList.first.virtDirRow.hScroll.style["margin-left"] = this.startPinnedWidth + "px";
         this.markForCheck();
     }
 

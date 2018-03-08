@@ -357,7 +357,7 @@ export class IgxGridCellComponent {
         if (target) {
             target.nativeElement.focus();
         } else {
-            this.row.grid.verticalScrollContainer.scrollPrev();
+            this.row.grid.parentVirtDir.scrollPrev();
         }
     }
 
@@ -368,7 +368,7 @@ export class IgxGridCellComponent {
         if (target) {
             target.nativeElement.focus();
         } else {
-            this.row.grid.verticalScrollContainer.scrollNext();
+            this.row.grid.parentVirtDir.scrollNext();
         }
     }
 

@@ -54,11 +54,11 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
     @Output()
     public onChunkPreload = new EventEmitter<any>();
 
-    private hScroll;
+    public hScroll;
     private func;
     private hCache: number[];
     private vh: ComponentRef<VirtualHelperComponent>;
-    private hvh: ComponentRef<HVirtualHelperComponent>;
+    public hvh: ComponentRef<HVirtualHelperComponent>;
     private _differ: IterableDiffer<T> | null = null;
     private _trackByFn: TrackByFunction<T>;
     private _lastTouchX = 0;
@@ -482,6 +482,7 @@ export class IgxForOfDirective<T> implements OnInit, OnChanges, DoCheck, OnDestr
         if (this.igxForScrollOrientation === "horizontal") {
             const totalWidth = this.igxForContainerSize ? this.initHCache(this.igxForOf) : 0;
             this.hScroll.children[0].style.width = totalWidth + "px";
+            this.hScroll.style.width = this.igxForContainerSize - 18 + "px";
         }
         if (this.igxForScrollOrientation === "vertical") {
             const count = this.totalItemCount || this.igxForOf.length;

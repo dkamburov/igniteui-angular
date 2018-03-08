@@ -32,7 +32,8 @@
         @extend %grid-tbody !optional;
 
         igx-display-container {
-            height: 100%;
+            height: calc(100% - 18px);
+            
         }
     }
 
